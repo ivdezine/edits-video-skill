@@ -230,9 +230,19 @@ slipClip({id, deltaSeconds:5.0})                             # video only: resto
 
 Keeps the element id, its timeline duration, transform keyframes and transitions. Replacing a
 video resets the in-point to the start of the source. Visual elements only: audio fails with
-"replace targets visual clips only" (see "Swap a music bed").
+"is on an audio lane; replace targets visual clips only" (see "Swap a music bed").
 
 ## Swap a music bed (tested)
+
+```
+replaceAudio({id:<bed>, path:"/Users/<user>/Movies/<proj>/new-bed.m4a"})   # same id, old duration
+trim({id:<bed>, side:"right", deltaSeconds:-<extra>})        # negative extends to the new length
+```
+
+`replaceAudio` keeps the element id, its volume and its place, so a build script needs no new id.
+It does not take the new file's length: a 25 s file over a 23 s bed stays 23 s until the trim.
+
+Alternative that leaves the old bed in place:
 
 ```
 setVolume({id:<old bed>, volume:0})                          # non-destructive; no delete needed
@@ -245,6 +255,31 @@ trim({id:<new bed>, side:"right", deltaSeconds:<excess>})    # end it with the p
 Cut the file to the timeline length first with ffmpeg (fade in 0.4 s, fade out 3 s) and match its
 loudness to the old bed, so no trim is needed. Find the new element by diffing `elements` before and
 after the add.
+
+## Picture-in-picture clip (tested)
+
+A phone clip set inside a card on a rendered scene, sped up, muted and faded:
+
+```
+addOverlay({startSeconds:14.3, path:"/Users/<user>/Movies/<proj>/IMG_2800.MOV", x:0.5, y:0.5677, scale:1.0})
+setTransform({id, scale:0.4271, x:0.5, y:0.5677})            # scale is the fraction of canvas height
+setSpeed({id, speed:4})                                      # 14.9 s source -> 3.7 s on the timeline
+setVolume({id, volume:0})
+setMask({id, shape:"rectangle", centerX:0.5, centerY:0.5, sizeW:1.0, sizeH:1.0, cornerRadius:0.03})
+trim({id, side:"left", deltaSeconds:0.2333})                 # source seconds; moves startTime
+move({id, toSeconds:14.3})                                   # put it back
+seek({seconds:14.3}); toggleKeyframe({id, property:"opacity"}); setOpacity({id, opacity:0})
+seek({seconds:14.5}); toggleKeyframe({id, property:"opacity"}); setOpacity({id, opacity:1})
+seek({seconds:17.7}); toggleKeyframe({id, property:"opacity"}); setOpacity({id, opacity:1})
+seek({seconds:17.9}); toggleKeyframe({id, property:"opacity"}); setOpacity({id, opacity:0})
+trim({id, side:"right", deltaSeconds:0.3})                   # last: end on the faded-out key
+```
+
+`addOverlay` returns the id and a new overlay track; the clip runs at full source length until
+`setSpeed` and the trims. Size the card in the rendered scene first and derive `x`, `y` and `scale`
+from it (center and height as fractions of the canvas). Set every keyframe before the right trim:
+seeking to the exact end edits the previous keyframe instead. Check the fades with a `frameSheet`
+across the in and out points.
 
 ## Insert a still before the last clip (tested)
 
