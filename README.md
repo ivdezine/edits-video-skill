@@ -6,6 +6,10 @@ as `metapilot-native`. With it, Claude can open projects, cut, trim, split on be
 reframe, add text, captions, filters, transitions, LUTs, speed curves and music, check loudness,
 inspect frames, and export.
 
+The video below was cut in Edits by Claude with this skill, from scene renders to export:
+
+https://github.com/user-attachments/assets/02225140-ad35-4ce3-80b6-6262c665d020
+
 Not affiliated with, endorsed by, or supported by Meta. Edits is a Meta product; this repository
 contains only notes and scripts written against the app's local server.
 
