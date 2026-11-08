@@ -1,0 +1,5 @@
+# Generated locally from the live Edits server by scripts/build_references.py.
+# They quote the app's own tool descriptions, so they are not redistributed here.
+references/tool-reference.md
+references/catalogs.md
+__pycache__/
