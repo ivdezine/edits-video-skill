@@ -52,11 +52,19 @@ element carries its `trackId`.
 - **`previewVideoStatus` takes only `{includeFrames}`.** Passing `resultId` or `id` fails with
   CommandError.
 - **`setExportSettings` needs the full preset row on a new project**: `resolutionType`,
-  `aspectRatio`, `quality`, `dynamicRange`. A partial row makes `export` fail with "incomplete
-  preset row". The schema lists no enums; a wrong value returns the valid list (values in
+  `aspectRatio`, `quality`, `dynamicRange` and `frameRate`. A partial row makes `export` fail
+  with "incomplete preset row, missing: <fields>"; a call with the first four and no `frameRate`
+  failed as "missing: frameRate", and a call with only `resolution` and `frameRate` listed the
+  other four. The schema lists no enums; a wrong value returns the valid list (values in
   `recipes.md`, Export). The `resolution:"WxH"` form only worked on the bundled Example project.
-  Calling it with `{}` returns the current settings. Its `frameRate` is ignored: the file follows
-  the project rate.
+  Calling it with `{}` returns the current settings. Pass the project rate as `frameRate`; the
+  file follows the project rate either way.
+- **Imports read only from `~/Movies`.** Edits is sandboxed. `importToMediaBin` on a file under
+  `~/GitHub/...` or the session scratchpad under `/private/tmp/...` fails with `import failed:
+  copyFailed(file:///..., Error Domain=NSCocoaErrorDomain Code=513 "<file> couldn't be copied
+  because you don't have permission to access ...")`. The same file under
+  `~/Movies/<folder>/` imports at once. Treat every tool that takes a media `path` the same way
+  (`replaceElementMedia` worked from `~/Movies` too); stage rendered clips, stills and audio there.
 - **`setCanvas` can loop on "an earlier edit is still settling; retry"** right after a project
   opens (3 to 18 s per attempt, repeatedly). `setAspectRatio({ratio})` and `setFrameRate({fps})`
   apply at once.
@@ -138,9 +146,12 @@ Before experimenting on a project the user cares about, `duplicateProject({id})`
   shows text fully revealed, so animation timing is only visible in an export.
 - `frameSheet` returns an inline image and saves a PNG under the app container's `frame-sheets/`.
   That PNG is sandboxed (EPERM to other processes): pass `image_dir` to
-  `mcp_client.Client.tool` to get the inline copy on disk. Cells are small (270 px wide in a
-  one-column 16:9 sheet) and the time label covers each cell's top-left corner, so use
-  `captureFrame` for detail.
+  `mcp_client.Client.tool` to get the inline copy on disk. Default cells are small (270 px wide
+  in a one-column 16:9 sheet; a six-frame, three-column 16:9 sheet came back 810x302). Pass
+  `cellWidth` for a larger sheet: `cellWidth:420` with 3 columns gave 1260x472 at 16:9, and
+  `cellWidth:300` with 3 columns gave 900x1066 at 9:16. The schema marks `cellWidth` required; it
+  is optional. The time label covers each cell's top-left corner, so use `captureFrame` for
+  detail.
 - `previewVideo` returns a `resultId` and an MP4 path under the app container's `tmp/`.
 - `export({path})` writes wherever `path` says; use an absolute path the user chose.
 

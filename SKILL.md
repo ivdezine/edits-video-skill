@@ -58,8 +58,9 @@ works by name) rather than telling the user the tool does not exist.
    unpicking it is slow (check `elements` after each `undo`).
 6. Verify visually before declaring done: `captureFrame({atSeconds})` or
    `captureFrame({times:"1,2.5,4"})` for exact composited frames (720 px wide),
-   `frameSheet({times,columns})` for a labeled contact sheet of the edit (no `id` needed; small
-   cells, and the time label covers each cell's top-left corner), `previewVideo` for motion (max
+   `frameSheet({times,columns,cellWidth})` for a labeled contact sheet of the edit (no `id`
+   needed; the default cells are small, so pass `cellWidth`, about 420 for 16:9 and 300 for 9:16
+   at 3 columns; the time label covers each cell's top-left corner), `previewVideo` for motion (max
    10 s, 12 frames). Pass `image_dir` to `mcp_client.Client.tool` to get the images on disk: the
    `path` the server returns is inside the app's sandbox and cannot be read. Look at the images;
    do not trust `ok:true` alone.
@@ -103,18 +104,27 @@ with `instanceId` from `getElement`.
   catalog instead, then apply, then `undo` if wrong.
 - **`required` lists lie**: alternatives are all marked required (`openProject` id/name,
   `frameSheet` id/path, `loudness` id/path), and so are optional tuning params (`findPauses`,
-  `quietPoint`, `audioOnsets` run on `{id}` alone). Pass only what you mean.
+  `quietPoint`, `audioOnsets` run on `{id}` alone; `frameSheet` runs without `cellWidth`). Pass
+  only what you mean.
 - **Enum-like strings are exact.** Speed curve presets are uppercase (`MONTAGE`, `HERO`,
   `BULLET`, `JUMP_CUT`, `FLASH_IN`, `FLASH_OUT`, `RAMP`, `STROBE`); a wrong value errors with the
   valid list, so read the error. `generateCaptions` `source` is `video`, `voiceover`,
   `importedAudio` or `all`. Many params list no enum in the schema; send a deliberately wrong
   value once and the error returns the valid list.
-- **Export needs the full preset row on a new project**: `setExportSettings({resolutionType:"HD",
-  aspectRatio:"nineBySixteen", quality:"High", dynamicRange:"SDR"})`, or `export` fails with an
-  incomplete-preset error. Valid values: `resolutionType` 720p, HD, 2K, 4K; `aspectRatio`
-  nineBySixteen, sixteenByNine, fourByFive, oneByOne, fiveByFour, fourByThree, threeByFour;
-  `quality` Low, Med, High; `dynamicRange` SDR, HDR. The export's `frameRate` is ignored: the
-  file follows the project rate, so `setFrameRate` first. Output is HEVC with AAC.
+- **Export needs the full preset row on a new project, all five fields**:
+  `setExportSettings({resolutionType:"HD", aspectRatio:"nineBySixteen", quality:"High",
+  dynamicRange:"SDR", frameRate:30})`. Leave any one out and `export` fails with "incomplete
+  preset row, missing: <field>", `frameRate` included. Valid values: `resolutionType` 720p, HD,
+  2K, 4K; `aspectRatio` nineBySixteen, sixteenByNine, fourByFive, oneByOne, fiveByFour,
+  fourByThree, threeByFour; `quality` Low, Med, High; `dynamicRange` SDR, HDR. Pass the project
+  rate as `frameRate`: the file follows the project rate, so `setFrameRate` first. Output is HEVC
+  with AAC.
+- **Edits imports media only from `~/Movies`.** The app is sandboxed: `importToMediaBin` fails
+  on a path under `~/GitHub`, the scratchpad or `/private/tmp` with `import failed:
+  copyFailed(...) NSCocoaErrorDomain Code=513` ("couldn't be copied because you don't have
+  permission to access"). Render or copy every file into a folder under `~/Movies` (for example
+  `~/Movies/<project>/`) before importing, and treat every tool that takes a media `path`
+  (`replaceElementMedia`, the home import tools) the same way.
 - **Text presets overwrite**: `applyTextPreset` replaces font, color, size and position, so apply
   the preset first and customize after. With `id` (or the selection) it needs
   `selectTool({tool:"textPresets"})` first; with `ids` it opens the tool itself.

@@ -7,6 +7,11 @@ All recipes assume a project is open (`appState.screen == "editor"`) and that id
 `elements`, `getElement` or the previous call's response. Finish every recipe with a visual check
 (`captureFrame` or `frameSheet`) and `saveProject`.
 
+Every media `path` (`importToMediaBin`, `replaceElementMedia`, the home import tools) must be an
+absolute path under `~/Movies`: Edits is sandboxed, and `importToMediaBin` fails anywhere else
+with `copyFailed ... Code=513`. `/Users/<user>/Movies/<proj>/` below is a folder you stage the
+files in.
+
 ## Animated title (tested)
 
 ```
@@ -155,20 +160,22 @@ Synchronous, about 3.5 s, returns frames inline and an MP4 path. `previewVideoSt
 ```
 setFrameRate({fps:30})                                       # the file follows the project rate
 setExportSettings({resolutionType:"HD", aspectRatio:"nineBySixteen",
-                   quality:"High", dynamicRange:"SDR"})      # the full preset row
+                   quality:"High", dynamicRange:"SDR",
+                   frameRate:30})                            # the full preset row, all five
 saveProject()
 export({path:"/Users/<user>/Movies/<name>.mp4"})
 exportStatus()                                               # poll: preparing -> exporting (progress) -> complete
 ```
 
-- Send the whole row. On a new project a partial call leaves the preset incomplete and `export`
-  fails with "incomplete preset row". The older `resolution:"720x1280"` form worked only on the
-  bundled Example project, whose preset was already filled in.
+- Send the whole row, `frameRate` included. On a new project a partial call leaves the preset
+  incomplete and `export` fails with "incomplete preset row, missing: <fields>". The older
+  `resolution:"720x1280"` form worked only on the bundled Example project, whose preset was
+  already filled in.
 - Valid values (the schema lists none; a wrong value returns this list): `resolutionType` 720p, HD,
   2K, 4K; `aspectRatio` nineBySixteen, sixteenByNine, fourByFive, oneByOne, fiveByFour,
   fourByThree, threeByFour; `quality` Low, Med, High; `dynamicRange` SDR, HDR.
-- `HD` gives 1080x1920 or 1920x1080, HEVC video with AAC audio. A `frameRate` passed here is
-  ignored.
+- `HD` gives 1080x1920 or 1920x1080, HEVC video with AAC audio. Pass the project rate as
+  `frameRate`: it must be present, and the file follows the project rate.
 - Check the file, not the status: `ffprobe` for size, rate and duration, and a contact sheet pulled
   from the file (`ffmpeg -vf fps=1/3,scale=360:-1,tile=4x3`). Text animations show their real reveal
   timing only in the file; `captureFrame` can show the fully revealed text.
@@ -177,10 +184,11 @@ exportStatus()                                               # poll: preparing -
 
 There is no solid-color or title-card generator, so build each frame outside the app at the canvas
 size (1440x2560 or 2560x1440): an HTML page rendered by headless Chrome, or ffmpeg. Use the
-user's real brand files for logos and the exact wording for taglines.
+user's real brand files for logos and the exact wording for taglines. Write the files into a folder
+under `~/Movies`; rendered video scenes (H.264 MP4s) import the same way and keep their length.
 
 ```
-importToMediaBin({path:"/abs/01.png"})                       -> aliasId      # one call per file
+importToMediaBin({path:"/Users/<user>/Movies/<proj>/01.png"}) -> aliasId     # one call per file
 addMediaPanelItemsToTimeline({aliasIds:[a1,a2,a3]})          # appends in order; stills last 3 s
 trim({id, side:"right", deltaSeconds:0.5})                   # positive shortens; 3.0 -> 2.5 s
 addTransition({fromId:a, toId:b, filterId:"transition_dissolve", durationSeconds:0.4})
@@ -216,7 +224,7 @@ the line yourself. `getElement` returns `text` and `fontSize` to confirm.
 ## Swap media without rebuilding (tested)
 
 ```
-replaceElementMedia({id, path:"/abs/new.png"})               # or a video for a photo, and back
+replaceElementMedia({id, path:"/Users/<user>/Movies/<proj>/new.png"})  # or video for photo, and back
 slipClip({id, deltaSeconds:5.0})                             # video only: restore the in-point
 ```
 
@@ -229,7 +237,7 @@ video resets the in-point to the start of the source. Visual elements only: audi
 ```
 setVolume({id:<old bed>, volume:0})                          # non-destructive; no delete needed
 seek({seconds:0})
-importToMediaBin({path:"/abs/new-bed.m4a"})                  -> aliasId
+importToMediaBin({path:"/Users/<user>/Movies/<proj>/new-bed.m4a"}) -> aliasId
 addMediaPanelItemsToTimeline({aliasIds:[aliasId], startTime:0})   # lands on a free audio track
 trim({id:<new bed>, side:"right", deltaSeconds:<excess>})    # end it with the picture
 ```
@@ -249,7 +257,7 @@ trim({id:<new>, side:"right", deltaSeconds:-7})              # negative extends 
 ## Music from a file (tested)
 
 ```
-importToMediaBin({path:"/abs/bed.mp3"})                      -> aliasId
+importToMediaBin({path:"/Users/<user>/Movies/<proj>/bed.mp3"}) -> aliasId
 addMediaPanelItemsToTimeline({aliasIds:[aliasId]})           # lands on a new audio track at 0
 trim({id:<audio>, side:"right", deltaSeconds:<excess>})      # end it with the picture
 setVolume({id:<audio>, volume:0.8})
@@ -276,6 +284,12 @@ setTextPosition / setTextStyle / editText                    # re-lay the text f
 
 Because the ids carry over, the build script for the first format drives the second with only the
 paths and text layout changed. Prebuild the second set of stills at 2560x1440.
+
+Also tested 16:9 to 9:16 with rendered video clips: `saveProject` and `closeProject`, wait for
+`appState.screen == "home"`, duplicate, then `setAspectRatio({ratio:"9:16"})` (1440x2560) and one
+`replaceElementMedia` per clip. Dissolves and the imported music bed survive untouched. Give each
+replacement a new filename; set `aspectRatio:"nineBySixteen"` in `setExportSettings` before the
+second export.
 
 ## Work on a copy (tested)
 
