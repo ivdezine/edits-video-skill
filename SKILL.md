@@ -97,7 +97,8 @@ with `instanceId` from `getElement`.
   Rotation is degrees clockwise. Colors are `#RRGGBB` or `#RRGGBBAA`. Volume is linear gain 0 to
   10 (1 = unity).
 - **`seek` takes `seconds`**, not `time`. `trim({id, side:"left"|"right", deltaSeconds})`:
-  positive shortens.
+  positive shortens, negative lengthens. On a sped-up clip `deltaSeconds` is in source seconds
+  and snaps to a frame, and a left trim moves the start, so `move({id,toSeconds})` it back.
 - **`ArgumentParser.CommandError error 1` means the server rejected an argument**, not that the
   app failed. Drop the argument you added last. The most common cause: **do not pass `dryRun`**.
   Every tool that offers it (10 of them) fails this way when it is set. Validate by reading the
@@ -159,9 +160,15 @@ with `instanceId` from `getElement`.
 - **Long jobs**: analysis and render tools may outlive the request and return a job id; poll
   `jobStatus({id})`. `describeClip` takes about 10 s, `transcribeClip` scales with length.
   `previewVideo` is synchronous (about 3.5 s) and returns an MP4 path; `previewVideoStatus` takes
-  only `{includeFrames}`. `export` returns at once: poll `exportStatus` (`preparing`, `exporting`
-  with `progress` 0 to 1, `complete`) and then check the file exists.
+  only `{includeFrames}`. `export` returns at once: poll `exportStatus` and read its `state` key
+  (`preparing`, `exporting` with `progress` 0 to 1, `complete`), then check the file exists.
 - **Speed curves**: use `setSpeedCurve`; the `*SpeedPanel*` tools are deprecated UI drivers.
+- **Picture in picture**: `addOverlay({startSeconds,path,x,y,scale})` puts a clip on a new
+  overlay track at full source length; scale 1 fits the canvas height. Fade it with opacity
+  keyframes (`seek`, `toggleKeyframe({id,property:"opacity"})`, `setOpacity`), placing every
+  keyframe before trimming the right side. Recipe: "Picture-in-picture clip".
+- **Audio swaps use `replaceAudio({id,path})`**, not `replaceElementMedia` (visual only). It keeps
+  the element id and the old duration, so extend with a right `trim` and a negative delta.
 - **Two formats from one edit**: finish one, `closeProject`, `duplicateProject` it on home (the
   copy keeps every element id, so the same script drives both), `renameProject`, open the copy,
   `setAspectRatio`, then `replaceElementMedia` with stills built for the new shape and reposition

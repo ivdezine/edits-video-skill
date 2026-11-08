@@ -110,6 +110,25 @@ element carries its `trackId`.
   `setBeatDensity({id,density:"medium"})` (or `low`) before using `beatMarkers` for cut points.
 - **`setTransforms` `items` is a JSON string**, not an array: `items: JSON.stringify([{id,scale,x,y}])`.
   The response carries a per-item result.
+- **`trim` on a sped-up clip counts source seconds.** At `setSpeed` 4, `deltaSeconds:0.3` on the
+  right removed 0.267 source seconds and 0.067 timeline seconds; the value snaps to a frame
+  (`0.75` became `0.767`). A negative delta lengthens. A left trim moves `startTime` as well, so
+  put the clip back with `move({id,toSeconds})` and confirm with `getElement`.
+- **Opacity keyframes take three calls per point**: `seek({seconds})`,
+  `toggleKeyframe({id,property:"opacity"})`, then `setOpacity({id,opacity})`, which answers
+  `keyframed:true` and the `editTargetSeconds` it wrote. `getElement.mediaKeyframes` reports each
+  point's `time` relative to the clip's source (`sourceInPoint` plus the offset from the clip
+  start, so a clip trimmed to 0.233 shows its first key at 0.233) and its value as `alpha`.
+  Seeking to the element's exact end clamps the playhead inside the clip, and `setOpacity` then
+  edits the previous keyframe: place the fade-out keyframes while the clip is still long, then
+  trim the right side. Keyframes survive the trim.
+- **`addOverlay` scale 1 fits the canvas height.** `setTransform({id,scale,x,y})` resizes it, with
+  `x`, `y` the normalized center; `getTransform` echoes the values. A rectangle `setMask` with
+  `cornerRadius` (0.03 reads as a card's rounded corner) clips it, and `setVolume({id,volume:0})`
+  and `setSpeed({id,speed})` work on overlays as on main clips.
+- **`replaceElementMedia` refuses audio** with "is on an audio lane; replace targets visual clips
+  only". Use `replaceAudio({id,path})`: it keeps the element id but also the old duration, so a
+  longer file needs `trim({id,side:"right",deltaSeconds:-<extra>})` afterward.
 - **`transcriptJumpCut` is not a tool.** `transcribeClip`'s description mentions it, but no such
   tool is listed. Build jump cuts from `transcribeClip` or `findPauses` times with `splitAt`, then
   remove the gaps with `selectById` and `delete` (destructive: ask first).
@@ -157,6 +176,7 @@ Before experimenting on a project the user cares about, `duplicateProject({id})`
 
 ## Export states
 
-`export` returns `ok:true` at once. `exportStatus` then moves through `preparing`, `exporting`
+`export` returns `ok:true` at once. `exportStatus` reports under the key `state` (not `status`),
+which moves through `preparing`, `exporting`
 (with `progress` from 0 to 1) and `complete` (with `outputPath`); `idle` means nothing is running.
 Poll every 1 to 2 s and confirm the file exists before reporting success.
