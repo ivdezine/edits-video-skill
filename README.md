@@ -29,6 +29,7 @@ contains only notes and scripts written against the app's local server.
 | `references/recipes.md` | call sequences for common edits, each marked tested or untested |
 | `scripts/mcp_client.py` | a dependency-free Python client for the server (library and CLI) |
 | `scripts/build_references.py` | generates the tool reference and catalog ids from your own app |
+| `CHANGELOG.md` | what changed in each version |
 
 Two reference files are deliberately not shipped: `references/tool-reference.md` (every tool with
 its parameters) and `references/catalogs.md` (every filter, effect, transition, LUT, font, preset
@@ -89,7 +90,7 @@ token), no project is open yet, or the session simply has not reloaded the tool 
 
 ## Releases
 
-What changed in each version is on the
+What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md), with the full notes on the
 [releases page](https://github.com/ivdezine/edits-video-skill/releases). If you installed with
 `git clone`, update with `git pull` in `~/.claude/skills/edits-video`; your generated references are
 not touched.
