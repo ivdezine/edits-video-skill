@@ -82,6 +82,10 @@ python3 scripts/mcp_client.py tool appState
 python3 scripts/mcp_client.py list-tools tools.json
 ```
 
+If Claude reports an Edits tool as missing, `python3 scripts/mcp_client.py doctor` says which of
+three things is wrong: the server cannot be reached (Edits closed, its server off, or a stale
+token), no project is open yet, or the session simply has not reloaded the tool list.
+
 ## License
 
 MIT, see `LICENSE`. Covers the notes and scripts in this repository only.
