@@ -18,6 +18,13 @@ server wins: rerun `scripts/build_references.py` and recheck.
     works on both screens.
 - `scripts/mcp_client.py` handles all of this and can call any tool by name regardless of what the
   session's MCP client has loaded.
+- How each fault answers (measured 2026-11-08; `mcp_client.py doctor` reads them for you):
+  - Nothing listening on the port (Edits closed, or its server off): connection refused.
+  - Wrong token: HTTP 403 with `{"error":"unauthorized", ...}`. Its `instructions` field asks
+    the agent to have the user paste the token into chat; re-register the server instead.
+  - A tool the current screen does not offer, editor tools on home included: `tools/call` returns
+    `unknown tool (not in current manifest): <name>` with `isError`, the same as a misspelled
+    name. Only `appState` tells the two apart.
 
 ## Units and coordinates
 

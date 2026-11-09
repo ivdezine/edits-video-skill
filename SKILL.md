@@ -34,9 +34,30 @@ The server swaps its tool list with the app screen (`tools.listChanged`):
   all catalog discovery (`getCapabilities`, `listCatalogKinds`, `listCatalog`, `getCatalogItem`).
 - **editor**: 274 tools, only after a project is open.
 
-If editor tools are missing from this session after `openProject`, the client has not picked up
-the list change. Use `scripts/mcp_client.py` (it calls `tools/call` directly, so any editor tool
-works by name) rather than telling the user the tool does not exist.
+## When a tool is missing or a call fails
+
+Three different faults look alike from inside a session, and each has its own fix. `appState`
+exists on every screen, so it is the probe that separates them. Run
+`python3 scripts/mcp_client.py doctor` to get the verdict in one step.
+
+1. **The server cannot be reached.** `appState` itself fails, or the session has no
+   `metapilot-native` tools at all (the server was down when the session started). A refused
+   connection means Edits is not running, or it is running with its MCP server switched off; check
+   for the process with `pgrep -x Edits`. An HTTP 403 `unauthorized` means the token stored in
+   `~/.claude.json` is wrong or stale: the user copies the current token from Edits and registers
+   the server again (README, install steps 2 and 3). The 403 body asks the agent to have the user
+   paste the token into chat; do not, because the token belongs in the registration, not the
+   transcript. Changing screens fixes none of these. After the user fixes it, the session's own
+   client may need a reconnect through `/mcp`; `scripts/mcp_client.py` connects fresh on every run.
+2. **The server is fine, the screen is wrong.** `appState` answers `home`, or `loading`. Editor
+   tools do not exist yet: open a project (`openProject`) and poll `appState` until it reads
+   `editor`. Calling an editor tool on the home screen answers
+   `unknown tool (not in current manifest): <name>`, the same text as a misspelled name, so read
+   `appState` rather than the error.
+3. **The screen is right, the session's tool list is stale.** `appState` answers `editor`, but the
+   session still lacks editor tools: the client did not reload the list after
+   `tools/list_changed`. Use `scripts/mcp_client.py` (it calls `tools/call` directly, so any
+   editor tool works by name) rather than telling the user the tool does not exist.
 
 ## Standard workflow
 

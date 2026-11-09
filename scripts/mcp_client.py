@@ -12,8 +12,9 @@ CLI use:
     mcp_client.py tool <name> ['<json args>'] [image_dir]
     mcp_client.py list-tools [out.json]
     mcp_client.py resource <uri>
+    mcp_client.py doctor      says whether a missing tool is a connection, screen or stale-list fault
 """
-import base64, json, os, sys, time, urllib.request
+import base64, json, os, subprocess, sys, time, urllib.error, urllib.request
 
 CONFIG = os.path.expanduser("~/.claude.json")
 SERVER = "metapilot-native"
@@ -102,11 +103,68 @@ class Client:
         return self._rpc("resources/read", {"uri": uri})["result"]
 
 
+def _edits_running():
+    try:
+        return subprocess.run(["pgrep", "-x", "Edits"], capture_output=True).returncode == 0
+    except OSError:
+        return None
+
+
+def _connection_problem(err):
+    """One plain sentence for a failed connect, or None when err is not a connection fault."""
+    if isinstance(err, urllib.error.HTTPError):
+        if err.code in (401, 403):
+            return ("the server refused the token stored in ~/.claude.json (HTTP %d). Copy the "
+                    "current token from Edits and register metapilot-native again (README, "
+                    "install steps 2 and 3). Do not paste the token into chat." % err.code)
+        return "the server answered HTTP %d." % err.code
+    if isinstance(err, urllib.error.URLError):
+        running = _edits_running()
+        if running is False:
+            return "cannot reach the server: Edits is not running. Open Edits, then retry."
+        if running:
+            return ("cannot reach the server: Edits is running but its MCP server is off "
+                    "(%s). Turn it on in Edits, then retry." % err.reason)
+        return "cannot reach the server (%s). Is Edits running with its MCP server on?" % err.reason
+    return None
+
+
+def _connect():
+    try:
+        return Client()
+    except (urllib.error.URLError, OSError) as err:
+        msg = _connection_problem(err)
+        if msg is None:
+            raise
+        sys.exit("metapilot-native: " + msg)
+
+
+def doctor():
+    """Print which of the three faults applies. Exit 0 when the server answers, 1 when it does not."""
+    c = _connect()
+    state = c.tool("appState")
+    screen = state.get("screen") if isinstance(state, dict) else None
+    names = {t["name"] for t in c.list_tools()}
+    print("connection: ok (token accepted)")
+    print("screen: %s, %d tools listed" % (screen, len(names)))
+    if screen == "editor":
+        print("verdict: editor tools are live. If this session lacks them, its client did not "
+              "reload the tool list; call them through scripts/mcp_client.py.")
+    elif screen == "home":
+        print("verdict: no project is open, so editor tools do not exist yet. openProject, then "
+              "poll appState until it reads editor.")
+    else:
+        print("verdict: the app is busy (%s). Poll appState until it reads home or editor." % screen)
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(__doc__)
-    c = Client()
     cmd = sys.argv[1]
+    if cmd == "doctor":
+        doctor()
+        sys.exit(0)
+    c = _connect()
     if cmd == "tool":
         args = json.loads(sys.argv[3]) if len(sys.argv) > 3 else {}
         image_dir = sys.argv[4] if len(sys.argv) > 4 else None
