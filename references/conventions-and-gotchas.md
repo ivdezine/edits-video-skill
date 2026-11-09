@@ -115,6 +115,18 @@ element carries its `trackId`.
   `setBeatDensity` work on it.
 - **Beat density defaults to extreme**: a 60 s track returned about 228 beats. Set
   `setBeatDensity({id,density:"medium"})` (or `low`) before using `beatMarkers` for cut points.
+- **`beatMarkers` returns `markers`, not `beats`.** The list sits under `markers` (each with
+  `timelineSeconds`, `sourceSeconds`, `isDownbeat`, `strength`), except that an empty result came
+  back as `beats: []`. `beatCount` stays the extreme-density total (228) whatever the density;
+  the number returned is `visibleCount` (9 at `medium` on a 25 s cut). Read either key.
+- **Imported audio has no auto beats.** On a music element imported from a file, `beatMarkers`
+  returned `beatCount: 0` at every density, and `audioOnsets` failed on the same element with the
+  generic "The operation could not be completed" (2026-11-09). Beat-synced cuts need catalog
+  music, or beats placed by hand with `addBeatMarker`.
+- **`splitAt` cuts land on the frame grid, not on the requested time.** With the default
+  `snap:"projectFrame"` a cut moves to the nearest project frame, up to half a frame away. One
+  split also left a 1.7 ms sliver between the pieces. Read the track back with `elements` after
+  every split that has to hit exact times (recipe: "Beat-synced cut").
 - **`setTransforms` `items` is a JSON string**, not an array: `items: JSON.stringify([{id,scale,x,y}])`.
   The response carries a per-item result.
 - **`trim` on a sped-up clip counts source seconds.** At `setSpeed` 4, `deltaSeconds:0.3` on the
