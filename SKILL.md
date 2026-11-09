@@ -84,7 +84,8 @@ exists on every screen, so it is the probe that separates them. Run
    at 3 columns; the time label covers each cell's top-left corner), `previewVideo` for motion (max
    10 s, 12 frames). Pass `image_dir` to `mcp_client.Client.tool` to get the images on disk: the
    `path` the server returns is inside the app's sandbox and cannot be read. Look at the images;
-   do not trust `ok:true` alone.
+   do not trust `ok:true` alone. Frames cannot show timing: after cutting to beats, read the cuts
+   back with `elements` and compare each `startTime` with its beat (recipe: "Beat-synced cut").
 7. `saveProject`. Export only when asked: `setExportSettings` with the full preset row, then
    `export({path})`, poll `exportStatus` (recipe in `references/recipes.md`). Then check the file
    with `ffprobe` and a contact sheet from the file itself.
@@ -166,8 +167,9 @@ with `instanceId` from `getElement`.
   rendered by headless Chrome, or ffmpeg) at the canvas size and import that. Recipe: "Video from
   stills".
 - **Licensed music has no readable source**: `loudness`, `quietPoint` and `audioOnsets` fail on a
-  catalog music element ("has no readable source file"). `beatMarkers` works on it, and the audio
-  analysis tools work on video clips and imported audio. `listMusicTracks` with
+  catalog music element ("has no readable source file"). `beatMarkers` works on it. Imported
+  audio is the reverse: `beatMarkers` finds no beats on it, and `audioOnsets` failed on one
+  imported track. The analysis tools do work on video clips. `listMusicTracks` with
   `license:"royaltyFree"` returned nothing on 2026-11-08; catalog tracks are licensed for use
   inside Meta's apps, so for a video leaving Instagram, use audio the user owns and ask about its
   license before it is redistributed.

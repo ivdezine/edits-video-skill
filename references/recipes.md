@@ -56,12 +56,47 @@ Only between neighboring clips on the main track.
 ```
 elements({fields:"id,content,trackType,startTime,endTime"})  -> music element id, video clip id
 setBeatDensity({id:<music>, density:"medium"})               # default extreme is far too dense
-beatMarkers({id:<music>})                                    -> beats[].timelineSeconds, estimatedBpm
+beatMarkers({id:<music>})                                    -> markers[].timelineSeconds
 splitAt({id:<clip>, times:[<beat times inside the clip>]})   -> pieces[].id
+elements({fields:"id,content,trackType,startTime,endTime"})  # read the cuts back (below)
 ```
 
-Then style the pieces per beat (`setTransforms` for punch-ins, `applyEffect`, transitions). Keep
-only times strictly inside the clip's range.
+Keep only times strictly inside the clip's range. `beatMarkers` returns the markers visible at the
+current density under `markers` (the key reads `beats` when the list is empty); `beatCount` is
+the total at the densest setting, not the number returned. Each marker carries `timelineSeconds`,
+`sourceSeconds`, `isDownbeat` and `strength`. It only finds beats on catalog music: on imported
+audio it returned `beatCount: 0` (see "Imported audio has no auto beats" in the gotchas).
+
+**Read the cuts back.** `splitAt` snaps each time to the project frame grid, so a cut lands up to
+half a frame from its beat (8.3 ms at 60 fps, 16.7 ms at 30 fps), which is inaudible. The contact
+sheet cannot show timing, so check it numerically: read the main track back and compare each
+piece's `startTime` with the beat it was meant for.
+
+```python
+fps = c.tool("getCanvas")["frameRate"]
+tol = 1 / (2 * fps)                       # half a frame
+vid = sorted((e for e in c.tool("elements", {"fields": "id,trackType,startTime,endTime"})["elements"]
+              if e["trackType"] == "video"), key=lambda e: e["startTime"])
+starts = [e["startTime"] for e in vid]
+for beat in targets:                      # the beat times you passed to splitAt
+    s = min(starts, key=lambda s: abs(s - beat))
+    print(beat, s, "ok" if abs(s - beat) <= tol else "OFF by %.3f s" % (s - beat))
+for a, b in zip(vid, vid[1:]):            # neighbors should touch
+    if b["startTime"] - a["endTime"] > 1e-6:
+        print("gap", a["endTime"], b["startTime"])
+```
+
+Measured on 2026-11-09 (60 fps project, catalog music at `medium`): beats at 2.64 and 8.08 landed
+at 2.6333 and 8.0833, inside the half-frame tolerance; a cut placed on purpose at 19.1 against a
+beat at 19.0 was flagged `OFF by 0.100 s`. The 8.08 split also left a 1.7 ms sliver between the
+two pieces (first piece ends 8.0817, second starts 8.0833). No frame time falls inside a gap that
+small, so it renders nothing, but a gap of a frame or more would show as black: the second loop
+reports both. If a cut reads OFF, fix the time and split again, or `move` the piece, rather than
+trusting the request.
+
+Then style the pieces per beat (`setTransforms` for punch-ins, `applyEffect`, transitions). The
+beat detector can itself misplace a beat, which no read-back catches, so listen to a
+`previewVideo` before export.
 
 ## Shot-based cut (tested for detectShots; the snap mode is untested)
 
