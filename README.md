@@ -4,7 +4,7 @@ A [Claude Code](https://docs.claude.com/en/docs/claude-code) skill for driving t
 editor for macOS through the local MCP (Model Context Protocol) server the app exposes, registered
 as `metapilot-native`. With it, Claude can open projects, cut, trim, split on beats or shots,
 reframe, add text, captions, filters, transitions, LUTs, speed curves and music, check loudness,
-inspect frames, and export.
+inspect frames, confirm that beat-synced cuts land on the beat, and export.
 
 The video below was cut in Edits by Claude with this skill, from scene renders to export:
 
@@ -15,7 +15,8 @@ contains only notes and scripts written against the app's local server.
 
 ## Status
 
-- Tested against **Edits 454.0.0** for macOS (server `metapilot-native` 1.0.0) on 2026-11-08.
+- Tested against **Edits 454.0.0** for macOS (server `metapilot-native` 1.0.0) on 2026-11-08. The
+  beat-synced cut recipe was retested on 2026-11-09.
 - The server is not publicly documented and may change with any app update. Where the live server
   disagrees with these notes, the server wins: regenerate the references (below) and recheck.
 
@@ -28,6 +29,7 @@ contains only notes and scripts written against the app's local server.
 | `references/recipes.md` | call sequences for common edits, each marked tested or untested |
 | `scripts/mcp_client.py` | a dependency-free Python client for the server (library and CLI) |
 | `scripts/build_references.py` | generates the tool reference and catalog ids from your own app |
+| `CHANGELOG.md` | what changed in each version |
 
 Two reference files are deliberately not shipped: `references/tool-reference.md` (every tool with
 its parameters) and `references/catalogs.md` (every filter, effect, transition, LUT, font, preset
@@ -85,6 +87,13 @@ python3 scripts/mcp_client.py list-tools tools.json
 If Claude reports an Edits tool as missing, `python3 scripts/mcp_client.py doctor` says which of
 three things is wrong: the server cannot be reached (Edits closed, its server off, or a stale
 token), no project is open yet, or the session simply has not reloaded the tool list.
+
+## Releases
+
+What changed in each version is in [`CHANGELOG.md`](CHANGELOG.md), with the full notes on the
+[releases page](https://github.com/ivdezine/edits-video-skill/releases). If you installed with
+`git clone`, update with `git pull` in `~/.claude/skills/edits-video`; your generated references are
+not touched.
 
 ## License
 
